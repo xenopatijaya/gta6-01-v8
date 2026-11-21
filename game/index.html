@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AURELIA BAY — an open-world crime game</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #1a1210; font-family: "Segoe UI", system-ui, sans-serif; color: #f5efe6; }
+  #game { position: fixed; inset: 0; }
+  canvas.webgl { display: block; width: 100%; height: 100%; }
+  .panel { position: fixed; z-index: 10; }
+  #topbar { top: 14px; right: 18px; text-align: right; pointer-events: none; }
+  #stars { font-size: 30px; letter-spacing: 4px; color: #ffd23f; text-shadow: 0 2px 8px rgba(0,0,0,.7); }
+  #cash { font-size: 26px; font-weight: 700; color: #9be15d; text-shadow: 0 2px 6px rgba(0,0,0,.8); }
+  #respect { font-size: 14px; letter-spacing: 2px; text-transform: uppercase; color: #ffd9a0; }
+  #vitals { left: 18px; bottom: 18px; width: 230px; pointer-events: none; }
+  .bar { height: 13px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.35); margin-top: 5px; }
+  .bar > div { height: 100%; transition: width .15s; }
+  #healthFill { background: #7ac74f; width: 100%; }
+  #armorFill { background: #53a8c9; width: 0%; }
+  #weapon { margin-top: 7px; font-size: 16px; font-weight: 600; text-shadow: 0 1px 4px #000; }
+  #speedo { right: 18px; bottom: 18px; font-size: 34px; font-weight: 800; display: none; text-shadow: 0 2px 8px rgba(0,0,0,.8); }
+  #radioName { right: 18px; bottom: 66px; font-size: 15px; color: #ffd9a0; text-shadow: 0 1px 4px #000; }
+  #minimap { left: 18px; top: 14px; width: 168px; height: 168px; border: 2px solid rgba(255,255,255,.4); border-radius: 6px; background: #1d2733; }
+  #objective { top: 16px; left: 50%; transform: translateX(-50%); max-width: 560px; text-align: center; font-size: 17px; font-weight: 600; background: rgba(10,14,20,.62); padding: 8px 18px; border-radius: 8px; display: none; }
+  #banner { top: 24%; left: 50%; transform: translateX(-50%); text-align: center; display: none; pointer-events: none; }
+  #bannerTitle { font-size: 40px; font-weight: 900; letter-spacing: 3px; text-shadow: 0 3px 12px rgba(0,0,0,.85); }
+  #bannerText { font-size: 17px; margin-top: 4px; text-shadow: 0 2px 6px rgba(0,0,0,.9); }
+  #dialogue { bottom: 108px; left: 50%; transform: translateX(-50%); width: min(620px, 86vw); background: rgba(8,10,16,.78); border-left: 4px solid #ffd23f; padding: 10px 16px; border-radius: 6px; display: none; }
+  #dialogueWho { color: #ffd23f; font-weight: 700; font-size: 14px; letter-spacing: 1px; text-transform: uppercase; }
+  #dialogueText { font-size: 17px; margin-top: 2px; }
+  #interact { bottom: 190px; left: 50%; transform: translateX(-50%); font-size: 16px; background: rgba(10,14,20,.65); padding: 6px 14px; border-radius: 20px; display: none; }
+  #bustBar { bottom: 230px; left: 50%; transform: translateX(-50%); width: 260px; display: none; text-align: center; font-size: 13px; letter-spacing: 2px; }
+  #bustTrack { height: 9px; background: rgba(0,0,0,.6); border: 1px solid #e83a3a; margin-top: 3px; }
+  #bustFill { height: 100%; width: 0%; background: #e83a3a; }
+  #garageMenu { top: 50%; left: 50%; transform: translate(-50%,-50%); width: 430px; background: rgba(10,14,20,.92); border: 2px solid #e8b04a; border-radius: 12px; padding: 18px 20px; display: none; }
+  #garageMenu h2 { color: #e8b04a; letter-spacing: 2px; font-size: 20px; }
+  .grow { display: flex; align-items: center; gap: 10px; padding: 9px 6px; border-bottom: 1px solid rgba(255,255,255,.12); }
+  .grow.disabled { opacity: .45; }
+  .gkey { background: #e8b04a; color: #14100a; font-weight: 800; border-radius: 5px; padding: 2px 8px; }
+  .gname { flex: 1; font-weight: 600; }
+  .gname small { display: block; font-weight: 400; color: #cbb; font-size: 12px; }
+  .gprice { color: #9be15d; font-weight: 700; }
+  .screen { position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: linear-gradient(180deg, rgba(30,16,8,.88), rgba(10,14,24,.94)); padding: 24px; }
+  .screen h1 { font-size: 64px; letter-spacing: 8px; color: #ffd23f; text-shadow: 0 4px 24px rgba(255,150,40,.5); }
+  .screen h2 { font-size: 19px; font-weight: 400; color: #ffd9a0; margin-top: 6px; max-width: 640px; }
+  .screen .controls { margin-top: 18px; font-size: 14.5px; line-height: 1.65; color: #ddd; max-width: 660px; }
+  .btn { margin-top: 16px; background: #ffd23f; color: #1a1408; border: none; font-size: 19px; font-weight: 800; letter-spacing: 1px; padding: 12px 42px; border-radius: 8px; cursor: pointer; }
+  .btn:hover { background: #ffdf6b; }
+  .btn.secondary { background: transparent; color: #ffd23f; border: 2px solid #ffd23f; }
+  .btn:disabled { opacity: .35; cursor: default; }
+  #pauseScreen { display: none; }
+  #statsLine { margin-top: 14px; font-size: 14px; color: #a8c8e8; }
+</style>
+<script type="importmap">
+{"imports": {"three": "./vendor/three.module.min.js"}}
+</script>
+</head>
+<body>
+<div id="game"></div>
+
+<canvas id="minimap" class="panel" width="168" height="168"></canvas>
+<div id="topbar" class="panel">
+  <div id="stars">☆☆☆☆☆</div>
+  <div id="cash">$250</div>
+  <div id="respect">Runner</div>
+</div>
+<div id="objective" class="panel"></div>
+<div id="banner" class="panel"><div id="bannerTitle"></div><div id="bannerText"></div></div>
+<div id="dialogue" class="panel"><div id="dialogueWho"></div><div id="dialogueText"></div></div>
+<div id="interact" class="panel"></div>
+<div id="bustBar" class="panel">BUSTED<div id="bustTrack"><div id="bustFill"></div></div></div>
+<div id="vitals" class="panel">
+  <div class="bar"><div id="healthFill"></div></div>
+  <div class="bar"><div id="armorFill"></div></div>
+  <div id="weapon">Fists —</div>
+</div>
+<div id="speedo" class="panel">0 km/h</div>
+<div id="radioName" class="panel"></div>
+
+<div id="garageMenu" class="panel">
+  <h2>SALGADO'S AUTO WORKS</h2>
+  <div style="margin:6px 0 4px">Cash: <b id="garageCash">$0</b> · <span id="garageNote"></span></div>
+  <div id="garageRows"></div>
+  <div style="margin-top:10px;font-size:13px;color:#bbb">Press 1–4 to buy · G or Esc to leave</div>
+</div>
+
+<div id="startScreen" class="screen">
+  <h1>AURELIA BAY</h1>
+  <h2>Rafe Delgado was the best wheelman on the coast — until he walked away. Now fixer Ines Salgado is calling in an old favour, and the whole Bay is about to remember his name.</h2>
+  <div class="controls">
+    <b>WASD</b> move / drive · <b>Mouse</b> look &amp; aim · <b>Shift</b> sprint · <b>Space</b> jump / handbrake ·
+    <b>E</b> enter / exit car · <b>F</b> take a job at a marker · <b>1/2/3</b> fists, pistol, SMG ·
+    <b>Click</b> fire · <b>R</b> reload · <b>Q</b> radio · <b>G</b> garage · <b>Esc</b> pause<br>
+    Gold markers are story jobs for Ines. Cyan starts a street race, green starts a parcel run, and the yellow bay on the west side is the garage.
+  </div>
+  <button id="newGameBtn" class="btn">NEW GAME</button>
+  <button id="continueBtn" class="btn secondary">CONTINUE</button>
+  <div id="statsLine"></div>
+</div>
+
+<div id="pauseScreen" class="screen">
+  <h1>PAUSED</h1>
+  <h2 id="pauseStats"></h2>
+  <button id="resumeBtn" class="btn">RESUME</button>
+  <button id="restartBtn" class="btn secondary">RESTART STORY</button>
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
